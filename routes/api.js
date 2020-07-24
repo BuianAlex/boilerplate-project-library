@@ -59,24 +59,98 @@ module.exports = function (app) {
     })
 
     .delete(function (req, res) {
+      clientConnect().then((connect) => {
+        const db = connect.db('my-database');
+        db.collection('books')
+          .deleteMany({})
+          .then((docs) => {
+            clientClose(client);
+            res.send('complete delete successful');
+          });
+      });
       //if successful response will be 'complete delete successful'
     });
 
   app
     .route('/api/books/:id')
     .get(function (req, res) {
-      var bookid = req.params.id;
+      const bookId = req.params.id;
+      if (ObjectId.isValid(bookId)) {
+        clientConnect().then((connect) => {
+          const db = connect.db('my-database');
+          db.collection('books')
+            .findOne({ _id: ObjectId(bookId) })
+            // .toArray()
+            .then((docs) => {
+              clientClose(client);
+              if (docs) {
+                res.send(docs);
+              } else {
+                res.send('id Error');
+              }
+            });
+        });
+      } else {
+        res.send('id Error');
+      }
+
       //json res format: {"_id": bookid, "title": book_title, "comments": [comment,comment,...]}
     })
 
     .post(function (req, res) {
-      var bookid = req.params.id;
+      var bookId = req.params.id;
       var comment = req.body.comment;
+      if (ObjectId.isValid(bookId)) {
+        if (comment && comment.length > 0) {
+          clientConnect().then((client) => {
+            const db = client.db('my-database');
+            db.collection('books')
+              .findOneAndUpdate(
+                { _id: ObjectId(bookId) },
+                {
+                  $set: { title: 'false11' },
+                  $push: { comments: comment },
+                },
+                { returnOriginal: false }
+              )
+              .then((result) => {
+                clientClose(client);
+                if (!!result.value) {
+                  res.send(result.value);
+                } else {
+                  res.send('id Error');
+                }
+              });
+          });
+        } else {
+          res.send('missing comment');
+        }
+      } else {
+        res.send('id Error');
+      }
       //json res format same as .get
     })
 
     .delete(function (req, res) {
-      var bookid = req.params.id;
+      const bookId = req.params.id;
+      if (ObjectId.isValid(bookId)) {
+        clientConnect().then((connect) => {
+          const db = connect.db('my-database');
+          db.collection('books')
+            .deleteOne({ _id: ObjectId(bookId) })
+            .then((result) => {
+              clientClose(client);
+              if (result.deletedCount > 0) {
+                res.send('delete successful');
+              } else {
+                res.send('id Error');
+              }
+            });
+        });
+      } else {
+        res.send('id Error');
+      }
+
       //if successful response will be 'delete successful'
     });
 };
